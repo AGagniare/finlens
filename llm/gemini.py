@@ -14,7 +14,7 @@ from prompts import SUMMARISE_PROMPT, QA_SYSTEM_PROMPT
 # supplies a consistent absolute tmp path per uploaded file within a session.
 _file_cache: dict[str, str] = {}
 
-_MODEL = "gemini-flash-lite-latest"
+_MODEL = "gemini-2.5-flash"
 
 
 def _get_or_upload(client: genai.Client, pdf_path: str) -> str:
