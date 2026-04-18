@@ -29,6 +29,8 @@ def run_summarise(pdf_file) -> Generator[str, None, None]:
         gr.Warning("Please upload a PDF first.")
         return
 
+    yield "_Analysing\u2026_"
+
     try:
         accumulated = []
         for chunk in summarise(pdf_file.name, api_key=api_key):
