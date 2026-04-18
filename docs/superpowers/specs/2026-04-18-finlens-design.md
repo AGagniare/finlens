@@ -88,7 +88,7 @@ def ask(pdf_path: str, history: list[dict], question: str, api_key: str) -> Gene
     """Upload PDF (or reuse cached file handle) and stream an answer."""
 ```
 
-Both functions yield text chunks for Gradio streaming. `pdf_path` is the local temp path Gradio provides after upload.
+Both functions yield text chunks for Gradio streaming. `pdf_path` is the local temp path Gradio provides after upload. `gemini.py` maintains a module-level dict `_file_cache: dict[str, str]` mapping local file path → Gemini Files API URI, so the same PDF is not re-uploaded on every Q&A turn within a session.
 
 ## `prompts.py`
 
