@@ -16,7 +16,7 @@ pinned: false
 
 Analyse financial PDFs in seconds. Upload any Japanese 決算短信, English 10-K, earnings release, or analyst report — FinLens auto-detects the language and responds in kind.
 
-**Live demo:** _(Hugging Face Spaces link — coming soon)_
+**Live demo:** [huggingface.co/spaces/AGagniare/Finlens](https://huggingface.co/spaces/AGagniare/Finlens)
 
 ## Features
 
