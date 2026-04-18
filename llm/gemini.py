@@ -45,7 +45,8 @@ def summarise(pdf_path: str, api_key: str) -> Generator[str, None, None]:
         config=config,
     )
     for chunk in response:
-        yield chunk.text
+        if chunk.text:
+            yield chunk.text
 
 
 def ask(
@@ -79,4 +80,5 @@ def ask(
         config=config,
     )
     for chunk in response:
-        yield chunk.text
+        if chunk.text:
+            yield chunk.text
