@@ -6,6 +6,13 @@ import llm.gemini as gemini_module
 from llm.gemini import summarise, ask
 
 
+@pytest.fixture(autouse=True)
+def clear_file_cache():
+    gemini_module._file_cache.clear()
+    yield
+    gemini_module._file_cache.clear()
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _make_fake_file(uri: str = "files/fake-uri-123"):
@@ -90,6 +97,11 @@ def test_ask_accepts_history(mock_genai):
     result = list(ask("/tmp/fake.pdf", history=history, question="And profit?", api_key="test-key"))
 
     assert result == ["42"]
+    # Verify history turns were forwarded to generate_content
+    call_args = mock_genai.GenerativeModel.return_value.generate_content.call_args
+    contents_passed = call_args[0][0]
+    roles = [c["role"] for c in contents_passed]
+    assert roles.count("user") >= 2  # history user turn + current question
 
 
 @patch("llm.gemini.genai")
