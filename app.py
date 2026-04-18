@@ -30,7 +30,10 @@ def run_summarise(pdf_file) -> Generator[str, None, None]:
         return
 
     try:
-        yield from summarise(pdf_file.name, api_key=api_key)
+        accumulated = []
+        for chunk in summarise(pdf_file.name, api_key=api_key):
+            accumulated.append(chunk)
+            yield "".join(accumulated)
     except Exception as exc:
         gr.Warning(f"Gemini API error: {exc}")
 
