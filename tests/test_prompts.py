@@ -21,8 +21,8 @@ def test_qa_prompt_instructs_document_only():
 
 
 def test_qa_prompt_handles_missing_answer():
-    # Must instruct model to say so when answer isn't in the document
-    assert "not" in QA_SYSTEM_PROMPT.lower() or "couldn't" in QA_SYSTEM_PROMPT.lower()
+    # Must instruct model to explicitly say so when an answer is absent from the document
+    assert "couldn't find" in QA_SYSTEM_PROMPT.lower() or "not found in the document" in QA_SYSTEM_PROMPT.lower()
 
 
 def test_qa_prompt_instructs_language_match():
