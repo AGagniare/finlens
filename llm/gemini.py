@@ -1,6 +1,7 @@
 """Gemini API client for FinLens. No Gradio imports here."""
 from __future__ import annotations
 
+import io
 from typing import Generator
 
 from google import genai
@@ -17,10 +18,16 @@ _MODEL = "gemini-1.5-flash"
 
 
 def _get_or_upload(client: genai.Client, pdf_path: str) -> str:
-    """Return the Gemini Files API URI for pdf_path, uploading if not cached."""
+    """Return the Gemini Files API URI for pdf_path, uploading if not cached.
+
+    Reads the file as bytes to avoid ASCII encoding errors on filenames
+    that contain non-ASCII characters (e.g. Japanese filenames).
+    """
     if pdf_path not in _file_cache:
+        with open(pdf_path, "rb") as f:
+            data = io.BytesIO(f.read())
         uploaded = client.files.upload(
-            file=pdf_path,
+            file=data,
             config=types.UploadFileConfig(mime_type="application/pdf"),
         )
         _file_cache[pdf_path] = uploaded.uri

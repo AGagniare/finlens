@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock, patch, call
+import io
+from unittest.mock import MagicMock, patch, mock_open
 import pytest
 
 import llm.gemini as gemini_module
@@ -25,6 +26,11 @@ def _make_streaming_response(chunks: list[str]):
     return [MagicMock(text=c) for c in chunks]
 
 
+def _patch_open():
+    """Return a mock_open that yields empty bytes — satisfies io.BytesIO(f.read())."""
+    return patch("builtins.open", mock_open(read_data=b""))
+
+
 # ── summarise() ───────────────────────────────────────────────────────────────
 
 @patch("llm.gemini.genai")
@@ -37,7 +43,8 @@ def test_summarise_yields_strings(mock_genai):
         _make_streaming_response(["Hello", " world"])
     )
 
-    result = list(summarise("/tmp/fake.pdf", api_key="test-key"))
+    with _patch_open():
+        result = list(summarise("/tmp/fake.pdf", api_key="test-key"))
 
     assert result == ["Hello", " world"]
 
@@ -52,11 +59,13 @@ def test_summarise_uploads_pdf(mock_genai):
         _make_streaming_response(["ok"])
     )
 
-    list(summarise("/tmp/report.pdf", api_key="test-key"))
+    with _patch_open():
+        list(summarise("/tmp/report.pdf", api_key="test-key"))
 
     mock_client.files.upload.assert_called_once()
+    # file arg is a BytesIO object (not a raw path — avoids non-ASCII filename errors)
     call_kwargs = mock_client.files.upload.call_args.kwargs
-    assert call_kwargs["file"] == "/tmp/report.pdf"
+    assert isinstance(call_kwargs["file"], io.BytesIO)
 
 
 @patch("llm.gemini.genai")
@@ -69,7 +78,8 @@ def test_summarise_configures_api_key(mock_genai):
         _make_streaming_response(["ok"])
     )
 
-    list(summarise("/tmp/report.pdf", api_key="my-secret-key"))
+    with _patch_open():
+        list(summarise("/tmp/report.pdf", api_key="my-secret-key"))
 
     mock_genai.Client.assert_called_once_with(api_key="my-secret-key")
 
@@ -86,7 +96,8 @@ def test_ask_yields_strings(mock_genai):
         _make_streaming_response(["Answer"])
     )
 
-    result = list(ask("/tmp/fake.pdf", history=[], question="What is revenue?", api_key="test-key"))
+    with _patch_open():
+        result = list(ask("/tmp/fake.pdf", history=[], question="What is revenue?", api_key="test-key"))
 
     assert result == ["Answer"]
 
@@ -105,7 +116,8 @@ def test_ask_accepts_history(mock_genai):
         {"role": "user", "content": "What is revenue?"},
         {"role": "assistant", "content": "¥1T"},
     ]
-    result = list(ask("/tmp/fake.pdf", history=history, question="And profit?", api_key="test-key"))
+    with _patch_open():
+        result = list(ask("/tmp/fake.pdf", history=history, question="And profit?", api_key="test-key"))
 
     assert result == ["42"]
     # Verify history turns were forwarded to generate_content_stream
@@ -126,8 +138,9 @@ def test_ask_caches_uploaded_file(mock_genai):
         _make_streaming_response(["ok"])
     )
 
-    list(ask("/tmp/same.pdf", history=[], question="Q1", api_key="test-key"))
-    list(ask("/tmp/same.pdf", history=[], question="Q2", api_key="test-key"))
+    with _patch_open():
+        list(ask("/tmp/same.pdf", history=[], question="Q1", api_key="test-key"))
+        list(ask("/tmp/same.pdf", history=[], question="Q2", api_key="test-key"))
 
     assert mock_client.files.upload.call_count == 1
 
@@ -142,7 +155,8 @@ def test_ask_different_pdfs_uploaded_separately(mock_genai):
         _make_streaming_response(["ok"])
     )
 
-    list(ask("/tmp/a.pdf", history=[], question="Q", api_key="test-key"))
-    list(ask("/tmp/b.pdf", history=[], question="Q", api_key="test-key"))
+    with _patch_open():
+        list(ask("/tmp/a.pdf", history=[], question="Q", api_key="test-key"))
+        list(ask("/tmp/b.pdf", history=[], question="Q", api_key="test-key"))
 
     assert mock_client.files.upload.call_count == 2
