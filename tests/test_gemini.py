@@ -1,4 +1,3 @@
-import types
 from unittest.mock import MagicMock, patch, call
 import pytest
 
@@ -31,8 +30,10 @@ def _make_streaming_response(chunks: list[str]):
 @patch("llm.gemini.genai")
 def test_summarise_yields_strings(mock_genai):
     fake_file = _make_fake_file()
-    mock_genai.upload_file.return_value = fake_file
-    mock_genai.GenerativeModel.return_value.generate_content.return_value = (
+    mock_client = MagicMock()
+    mock_genai.Client.return_value = mock_client
+    mock_client.files.upload.return_value = fake_file
+    mock_client.models.generate_content_stream.return_value = (
         _make_streaming_response(["Hello", " world"])
     )
 
@@ -44,27 +45,33 @@ def test_summarise_yields_strings(mock_genai):
 @patch("llm.gemini.genai")
 def test_summarise_uploads_pdf(mock_genai):
     fake_file = _make_fake_file()
-    mock_genai.upload_file.return_value = fake_file
-    mock_genai.GenerativeModel.return_value.generate_content.return_value = (
+    mock_client = MagicMock()
+    mock_genai.Client.return_value = mock_client
+    mock_client.files.upload.return_value = fake_file
+    mock_client.models.generate_content_stream.return_value = (
         _make_streaming_response(["ok"])
     )
 
     list(summarise("/tmp/report.pdf", api_key="test-key"))
 
-    mock_genai.upload_file.assert_called_once_with("/tmp/report.pdf", mime_type="application/pdf")
+    mock_client.files.upload.assert_called_once()
+    call_kwargs = mock_client.files.upload.call_args.kwargs
+    assert call_kwargs["file"] == "/tmp/report.pdf"
 
 
 @patch("llm.gemini.genai")
 def test_summarise_configures_api_key(mock_genai):
     fake_file = _make_fake_file()
-    mock_genai.upload_file.return_value = fake_file
-    mock_genai.GenerativeModel.return_value.generate_content.return_value = (
+    mock_client = MagicMock()
+    mock_genai.Client.return_value = mock_client
+    mock_client.files.upload.return_value = fake_file
+    mock_client.models.generate_content_stream.return_value = (
         _make_streaming_response(["ok"])
     )
 
     list(summarise("/tmp/report.pdf", api_key="my-secret-key"))
 
-    mock_genai.configure.assert_called_once_with(api_key="my-secret-key")
+    mock_genai.Client.assert_called_once_with(api_key="my-secret-key")
 
 
 # ── ask() ─────────────────────────────────────────────────────────────────────
@@ -72,8 +79,10 @@ def test_summarise_configures_api_key(mock_genai):
 @patch("llm.gemini.genai")
 def test_ask_yields_strings(mock_genai):
     fake_file = _make_fake_file()
-    mock_genai.upload_file.return_value = fake_file
-    mock_genai.GenerativeModel.return_value.generate_content.return_value = (
+    mock_client = MagicMock()
+    mock_genai.Client.return_value = mock_client
+    mock_client.files.upload.return_value = fake_file
+    mock_client.models.generate_content_stream.return_value = (
         _make_streaming_response(["Answer"])
     )
 
@@ -85,8 +94,10 @@ def test_ask_yields_strings(mock_genai):
 @patch("llm.gemini.genai")
 def test_ask_accepts_history(mock_genai):
     fake_file = _make_fake_file()
-    mock_genai.upload_file.return_value = fake_file
-    mock_genai.GenerativeModel.return_value.generate_content.return_value = (
+    mock_client = MagicMock()
+    mock_genai.Client.return_value = mock_client
+    mock_client.files.upload.return_value = fake_file
+    mock_client.models.generate_content_stream.return_value = (
         _make_streaming_response(["42"])
     )
 
@@ -97,42 +108,41 @@ def test_ask_accepts_history(mock_genai):
     result = list(ask("/tmp/fake.pdf", history=history, question="And profit?", api_key="test-key"))
 
     assert result == ["42"]
-    # Verify history turns were forwarded to generate_content
-    call_args = mock_genai.GenerativeModel.return_value.generate_content.call_args
-    contents_passed = call_args[0][0]
-    roles = [c["role"] for c in contents_passed]
+    # Verify history turns were forwarded to generate_content_stream
+    call_kwargs = mock_client.models.generate_content_stream.call_args.kwargs
+    contents_passed = call_kwargs["contents"]
+    roles = [c.role for c in contents_passed]
     assert roles.count("user") >= 2  # history user turn + current question
 
 
 @patch("llm.gemini.genai")
 def test_ask_caches_uploaded_file(mock_genai):
     """Same pdf_path should only be uploaded once across two ask() calls."""
-    # Clear module-level cache before test
-    gemini_module._file_cache.clear()
-
     fake_file = _make_fake_file(uri="files/cached-uri")
-    mock_genai.upload_file.return_value = fake_file
-    mock_genai.GenerativeModel.return_value.generate_content.return_value = (
+    mock_client = MagicMock()
+    mock_genai.Client.return_value = mock_client
+    mock_client.files.upload.return_value = fake_file
+    mock_client.models.generate_content_stream.return_value = (
         _make_streaming_response(["ok"])
     )
 
     list(ask("/tmp/same.pdf", history=[], question="Q1", api_key="test-key"))
     list(ask("/tmp/same.pdf", history=[], question="Q2", api_key="test-key"))
 
-    assert mock_genai.upload_file.call_count == 1
+    assert mock_client.files.upload.call_count == 1
 
 
 @patch("llm.gemini.genai")
 def test_ask_different_pdfs_uploaded_separately(mock_genai):
-    gemini_module._file_cache.clear()
-
     fake_file = _make_fake_file()
-    mock_genai.upload_file.return_value = fake_file
-    mock_genai.GenerativeModel.return_value.generate_content.return_value = (
+    mock_client = MagicMock()
+    mock_genai.Client.return_value = mock_client
+    mock_client.files.upload.return_value = fake_file
+    mock_client.models.generate_content_stream.return_value = (
         _make_streaming_response(["ok"])
     )
 
     list(ask("/tmp/a.pdf", history=[], question="Q", api_key="test-key"))
     list(ask("/tmp/b.pdf", history=[], question="Q", api_key="test-key"))
 
-    assert mock_genai.upload_file.call_count == 2
+    assert mock_client.files.upload.call_count == 2
