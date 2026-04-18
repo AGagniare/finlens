@@ -5,7 +5,7 @@ from typing import Generator
 import gradio as gr
 from dotenv import load_dotenv
 
-from llm.gemini import summarise, ask
+from llm.gemini import summarise, ask, compare
 
 load_dotenv()
 
@@ -122,11 +122,53 @@ with gr.Blocks() as qa_tab:
     )
 
 
+# ── Tab 3: Compare ───────────────────────────────────────────────────────────
+
+def run_compare(pdf_a, pdf_b) -> Generator[str, None, None]:
+    api_key = _get_api_key()
+    if not api_key:
+        gr.Warning(
+            "GEMINI_API_KEY is not set. Get a free key at https://aistudio.google.com/ "
+            "and add it to your .env file."
+        )
+        return
+
+    if pdf_a is None or pdf_b is None:
+        gr.Warning("Please upload both PDFs first.")
+        return
+
+    yield "_Comparing…_"
+
+    try:
+        accumulated = []
+        for chunk in compare(pdf_a.name, pdf_b.name, api_key=api_key):
+            accumulated.append(chunk)
+            yield "".join(accumulated)
+    except Exception as exc:
+        gr.Warning(f"Gemini API error: {exc}")
+
+
+with gr.Blocks() as compare_tab:
+    with gr.Row():
+        with gr.Column():
+            pdf_input_a = gr.File(label="Company A", file_types=[".pdf"])
+        with gr.Column():
+            pdf_input_b = gr.File(label="Company B", file_types=[".pdf"])
+    compare_btn = gr.Button("Compare", variant="primary")
+    compare_output = gr.Markdown(label="Comparison")
+
+    compare_btn.click(
+        fn=run_compare,
+        inputs=[pdf_input_a, pdf_input_b],
+        outputs=[compare_output],
+    )
+
+
 # ── App entry point ───────────────────────────────────────────────────────────
 
 demo = gr.TabbedInterface(
-    [summarise_tab, qa_tab],
-    tab_names=["📊 Summarise", "💬 Q&A"],
+    [summarise_tab, qa_tab, compare_tab],
+    tab_names=["📊 Summarise", "💬 Q&A", "⚖️ Compare"],
     title="FinLens — Financial Report Analyst",
 )
 
