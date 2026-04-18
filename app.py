@@ -53,8 +53,8 @@ with gr.Blocks() as summarise_tab:
 # ── Tab 2: Q&A ────────────────────────────────────────────────────────────────
 
 def upload_pdf_qa(pdf_file, history):
-    """Clear chat history when a new PDF is uploaded."""
-    return []
+    """Clear chat history and chatbot display when a new PDF is uploaded."""
+    return [], []
 
 
 def run_ask(pdf_file, history, question) -> Generator:
@@ -78,7 +78,8 @@ def run_ask(pdf_file, history, question) -> Generator:
         for chunk in ask(pdf_file.name, history=history, question=question, api_key=api_key):
             answer_chunks.append(chunk)
             partial = "".join(answer_chunks)
-            yield history + [{"role": "user", "content": question}, {"role": "assistant", "content": partial}], ""
+            new_history = history + [{"role": "user", "content": question}, {"role": "assistant", "content": partial}]
+            yield new_history, "", new_history
     except Exception as exc:
         gr.Warning(f"Gemini API error: {exc}")
 
@@ -100,13 +101,19 @@ with gr.Blocks() as qa_tab:
     pdf_input_qa.change(
         fn=upload_pdf_qa,
         inputs=[pdf_input_qa, chat_state],
-        outputs=[chat_state],
+        outputs=[chat_state, chatbot],
     )
 
     ask_btn.click(
         fn=run_ask,
         inputs=[pdf_input_qa, chat_state, question_input],
-        outputs=[chatbot, question_input],
+        outputs=[chatbot, question_input, chat_state],
+    )
+
+    question_input.submit(
+        fn=run_ask,
+        inputs=[pdf_input_qa, chat_state, question_input],
+        outputs=[chatbot, question_input, chat_state],
     )
 
 
