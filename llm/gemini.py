@@ -7,7 +7,7 @@ from typing import Generator
 from google import genai
 from google.genai import types
 
-from prompts import SUMMARISE_PROMPT, QA_SYSTEM_PROMPT
+from prompts import SUMMARISE_PROMPT, QA_SYSTEM_PROMPT, COMPARE_PROMPT
 
 # Maps local file path → Gemini Files API URI to avoid re-uploading the same PDF
 # during a single server session. Note: keyed by raw path string; assumes Gradio
@@ -74,6 +74,27 @@ def ask(
     ))
 
     config = types.GenerateContentConfig(system_instruction=QA_SYSTEM_PROMPT)
+    response = client.models.generate_content_stream(
+        model=_MODEL,
+        contents=contents,
+        config=config,
+    )
+    for chunk in response:
+        if chunk.text:
+            yield chunk.text
+
+
+def compare(pdf_path_a: str, pdf_path_b: str, api_key: str) -> Generator[str, None, None]:
+    """Upload two PDFs and stream a structured competitor comparison."""
+    client = genai.Client(api_key=api_key)
+    uri_a = _get_or_upload(client, pdf_path_a)
+    uri_b = _get_or_upload(client, pdf_path_b)
+    contents = [
+        types.Part.from_uri(file_uri=uri_a, mime_type="application/pdf"),
+        types.Part.from_uri(file_uri=uri_b, mime_type="application/pdf"),
+        types.Part.from_text(text=COMPARE_PROMPT),
+    ]
+    config = types.GenerateContentConfig()
     response = client.models.generate_content_stream(
         model=_MODEL,
         contents=contents,
