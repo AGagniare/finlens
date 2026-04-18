@@ -1,3 +1,13 @@
+---
+title: FinLens
+emoji: 📊
+colorFrom: blue
+colorTo: green
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
 # FinLens — Financial Report Analyst
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
