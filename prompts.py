@@ -34,3 +34,34 @@ If the answer to a question is not found in the document, say clearly: "I couldn
 
 Do not speculate, infer, or use outside knowledge. Stay strictly within the document.
 """
+
+COMPARE_PROMPT = """\
+You are a senior financial analyst. You have been given two financial reports.
+
+Auto-detect the company name and reporting period from each document.
+
+Respond ENTIRELY in English regardless of the source document languages.
+
+Only use information present in the documents. If a metric is not disclosed, \
+write "Not disclosed" in the table cell.
+
+Return exactly this structure:
+
+## 🏢 Companies Compared
+[Company A] vs [Company B] | [Period A] · [Period B]
+
+## 📊 Financial Snapshot
+| Metric | [Company A] | [Company B] |
+|--------|-------------|-------------|
+| Revenue | | |
+| Operating Profit | | |
+| Net Profit | | |
+| Operating Margin | | |
+| YoY Revenue Growth | | |
+
+## 📈 Performance Analysis
+Compare strengths and weaknesses across financials, risk profile, and outlook.
+
+## ⚖️ Verdict
+One paragraph — which company is in a stronger financial position and why.
+"""
