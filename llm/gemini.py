@@ -94,9 +94,7 @@ def compare(pdf_path_a: str, pdf_path_b: str, api_key: str) -> Generator[str, No
         types.Part.from_uri(file_uri=uri_b, mime_type="application/pdf"),
         types.Part.from_text(text=COMPARE_PROMPT),
     ]
-    config = types.GenerateContentConfig(
-        thinking_config=types.ThinkingConfig(thinking_budget=0)
-    )
+    config = types.GenerateContentConfig()
     response = client.models.generate_content_stream(
         model=_MODEL,
         contents=contents,
